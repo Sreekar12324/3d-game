@@ -7,13 +7,13 @@
     <link rel="stylesheet" href="style.css">
     <script async src="https://ga.jspm.io/npm:es-module-shims@1.5.1/dist/es-module-shims.js" crossorigin="anonymous"></script>
     <script type="importmap">
-    {
-        "imports": {
-            "three": "https://unpkg.com/three@0.154.0/build/three.module.js",
-            "three/addons/": "https://unpkg.com/three@0.154.0/examples/jsm/",
-            "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.154.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.154.0/examples/jsm/",
+                "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"
+            }
         }
-    }
     </script>
 </head>
 <body>
@@ -34,17 +34,20 @@
                 </div>
             </div>
             <div id="minerals">
-                Minerals: <span id="minerals-count">0</span> / 10
+                <span id="minerals-count">0</span> / 10
+            </div>
+            <div id="velocity">
+                <span>Velocity</span>
+                <span id="velocity-value">0.0</span> m/s
             </div>
         </div>
+
         <div id="hud-bottom">
             <div id="status-text">Collect 10 minerals.</div>
-            <div id="controls-text">
-                WASD = rotate, Space = thrust, Shift = boost
-            </div>
+            <div id="controls-text">WASD = rotate, Space = thrust, Shift = boost</div>
         </div>
     </div>
-    
+
     <script type="module" src="game.js"></script>
 </body>
 </html>
