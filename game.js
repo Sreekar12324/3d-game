@@ -31,6 +31,91 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
+// ==== AUDIO SETUP ====
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+const sounds = {
+    thrustGain: null,
+    thrustOscillator: null,
+    boostGain: null,
+    boostOscillator: null
+};
+
+// Create thrust sound (continuous low hum)
+function createThrustSound() {
+    if (sounds.thrustOscillator) return; // Already playing
+    sounds.thrustOscillator = audioContext.createOscillator();
+    sounds.thrustGain = audioContext.createGain();
+    sounds.thrustOscillator.type = 'sawtooth';
+    sounds.thrustOscillator.frequency.setValueAtTime(80, audioContext.currentTime);
+    sounds.thrustGain.gain.setValueAtTime(0, audioContext.currentTime);
+    sounds.thrustOscillator.connect(sounds.thrustGain);
+    sounds.thrustGain.connect(audioContext.destination);
+    sounds.thrustOscillator.start();
+}
+
+// Stop thrust sound
+function stopThrustSound() {
+    if (sounds.thrustGain) {
+        sounds.thrustGain.gain.setValueAtTime(0, audioContext.currentTime);
+    }
+}
+
+// Update thrust sound volume based on input
+function updateThrustSound(intensity) {
+    if (sounds.thrustGain) {
+        const targetVolume = intensity * 0.1; // Keep volume low
+        sounds.thrustGain.gain.linearRampToValueAtTime(targetVolume, audioContext.currentTime + 0.1);
+    }
+}
+
+// Play boost sound
+function playBoostSound() {
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(200, audioContext.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.3);
+    gain.gain.setValueAtTime(0.15, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+    osc.start(audioContext.currentTime);
+    osc.stop(audioContext.currentTime + 0.3);
+}
+
+// Play collection sound (success chime)
+function playCollectionSound() {
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, audioContext.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1200, audioContext.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.2, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+    osc.start(audioContext.currentTime);
+    osc.stop(audioContext.currentTime + 0.3);
+}
+
+// Play collision sound
+function playCollisionSound() {
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(50, audioContext.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(25, audioContext.currentTime + 0.2);
+    gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+    osc.start(audioContext.currentTime);
+    osc.stop(audioContext.currentTime + 0.2);
+}
+
+// Initialize thrust sound
+createThrustSound();
+
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
 scene.add(ambientLight);
 const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
@@ -166,11 +251,11 @@ shipBody.addEventListener('collide', (e) => {
     const otherBody = e.body === shipBody ? e.target : e.body;
     
     if (v > 8) {
-        gameState.crashed = true;
+                gameState.crashed = true;                        playCollisionSound();
         statusText.innerText = "CRASHED! Press R to reload.";
         statusText.style.color = "red";
     } else if (otherBody.isAsteroid && v < 5) {
-        const index = asteroids.findIndex(a => a.body === otherBody);
+                const index = asteroids.findIndex(a => a.body === otherBody);                            playCollisionSound();indIndex(a => a.body === otherBody);
         if (index !== -1) {
             scene.remove(asteroids[index].mesh);
             world.removeBody(asteroids[index].body);
@@ -179,9 +264,9 @@ shipBody.addEventListener('collide', (e) => {
             if (mineralsCount) mineralsCount.innerText = "Minerals: " + gameState.minerals + " / 10";
             
             if (gameState.minerals >= 10) {
+                                playCollectionSound();
                 statusText.innerText = "MISSION COMPLETE! 10 Minerals Collected.";
                 statusText.style.color = "#00ff00";
-            }
         }
     }
 });
@@ -230,6 +315,9 @@ function animate() {
     inputState.pitch += (targetPitchInput - inputState.pitch) * rampSpeed * dt;
     inputState.yaw += (targetYawInput - inputState.yaw) * rampSpeed * dt;
     inputState.thrust += (targetThrustInput - inputState.thrust) * rampSpeed * dt;
+        
+    // Update thrust sound
+    updateThrustSound(inputState.thrust);
     
     // Apply smoothed rotation
     pitch += inputState.pitch * PHYSICS.rotationSpeed * dt;
@@ -241,6 +329,10 @@ function animate() {
     
     // Boost mechanics with camera effects
     const isBoosting = keys['ShiftLeft'] || keys['ShiftRight'];
+        if (isBoosting && !keys.wasBoost) {
+        playBoostSound();
+    }
+    keys.wasBoost = isBoosting;
     
     if (keys['Space'] && gameState.fuel > 0) {
         const dir = new CANNON.Vec3(0, 0, 1);
