@@ -1,274 +1,227 @@
-// Phase 4 - Physics-driven ship with thrust and rotation controls
+// Phase 5 - Planet Gravity, Asteroid Field, and Crash States
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 
 // Scene, Camera, Renderer
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x000011);
+scene.background = new THREE.Color(0x000008); // Darker space
 
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 30, 70);
-
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// Lighting - Enhanced for space feel
-const ambientLight = new THREE.AmbientLight(0x202040, 0.3);
+// Lighting
+const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
 scene.add(ambientLight);
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5);
-directionalLight.position.set(50, 60, 30);
+const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
+directionalLight.position.set(100, 100, 50);
 scene.add(directionalLight);
 
-// Physics World (Cannon-es)
+// Physics World
 const world = new CANNON.World();
-world.gravity.set(0, 0, 0); // Zero gravity for space
-world.broadphase = new CANNON.SAPBroadphase(world);
+world.gravity.set(0, 0, 0); 
 const fixedTimeStep = 1/60;
 let accumulator = 0;
 
-// Starfield Background
+// Game State
+const gameState = {
+    minerals: 0,
+    fuel: 100,
+    isCrashed: false,
+    isLanded: false
+};
+
+// Starfield
 function createStarfield() {
     const starGeometry = new THREE.BufferGeometry();
-    const starCount = 3000;
+    const starCount = 5000;
     const positions = new Float32Array(starCount * 3);
-    
-    for (let i = 0; i < starCount * 3; i += 3) {
-        positions[i] = (Math.random() - 0.5) * 800;
-        positions[i + 1] = (Math.random() - 0.5) * 800;
-        positions[i + 2] = (Math.random() - 0.5) * 800;
-    }
-    
+    for (let i = 0; i < starCount * 3; i++) positions[i] = (Math.random() - 0.5) * 1500;
     starGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    
-    const starMaterial = new THREE.PointsMaterial({
-        color: 0xffffff,
-        size: 1.5,
-        sizeAttenuation: true
-    });
-    
+    const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 1.2 });
     const stars = new THREE.Points(starGeometry, starMaterial);
     scene.add(stars);
-    return stars;
 }
+createStarfield();
 
-const starfield = createStarfield();
-
-// Planet (visual + static physics body)
-const planetGeometry = new THREE.SphereGeometry(20, 64, 64);
+// Planet with Gravity
+const planetRadius = 30;
+const planetGeometry = new THREE.SphereGeometry(planetRadius, 64, 64);
 const planetMaterial = new THREE.MeshStandardMaterial({
-    color: 0x2244aa,
-    roughness: 0.8,
-    metalness: 0.2
+    color: 0x1133ff,
+    roughness: 0.7,
+    metalness: 0.3
 });
 const planet = new THREE.Mesh(planetGeometry, planetMaterial);
-planet.position.set(0, 0, 0);
 scene.add(planet);
 
-// Planet physics body (static)
-const planetShape = new CANNON.Sphere(20);
+const planetShape = new CANNON.Sphere(planetRadius);
 const planetBody = new CANNON.Body({ mass: 0, shape: planetShape });
-planetBody.position.set(0, 0, 0);
 world.addBody(planetBody);
 
-// Ship (NOW WITH PHYSICS)
+// Asteroid Field
+const asteroids = [];
+function createAsteroidField() {
+    for (let i = 0; i < 40; i++) {
+        const size = 1 + Math.random() * 3;
+        const geo = new THREE.IcosahedronGeometry(size, 1);
+        const mat = new THREE.MeshStandardMaterial({ color: 0x888888 });
+        const mesh = new THREE.Mesh(geo, mat);
+        
+        // Random position in a shell around planet
+        const dist = 60 + Math.random() * 100;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.random() * Math.PI;
+        mesh.position.set(
+            dist * Math.sin(phi) * Math.cos(theta),
+            dist * Math.sin(phi) * Math.sin(theta),
+            dist * Math.cos(phi)
+        );
+        scene.add(mesh);
+        
+        const shape = new CANNON.Sphere(size);
+        const body = new CANNON.Body({ mass: size * 10, shape: shape });
+        body.position.copy(mesh.position);
+        world.addBody(body);
+        asteroids.push({ mesh, body });
+    }
+}
+createAsteroidField();
+
+// Ship
 const shipGroup = new THREE.Group();
+const shipBodyGeo = new THREE.CylinderGeometry(0.5, 0.8, 3, 16);
+const shipBodyMat = new THREE.MeshStandardMaterial({ color: 0xcccccc });
+const shipBodyMesh = new THREE.Mesh(shipBodyGeo, shipBodyMat);
+shipGroup.add(shipBodyMesh);
 
-const shipBodyGeometry = new THREE.CylinderGeometry(0.5, 0.8, 3, 16);
-const shipBodyMaterial = new THREE.MeshStandardMaterial({
-    color: 0xcccccc,
-    roughness: 0.3,
-    metalness: 0.7
-});
-const shipBody = new THREE.Mesh(shipBodyGeometry, shipBodyMaterial);
-shipGroup.add(shipBody);
+const shipNoseGeo = new THREE.ConeGeometry(0.6, 1.5, 16);
+const shipNoseMat = new THREE.MeshStandardMaterial({ color: 0xff3333 });
+const shipNoseMesh = new THREE.Mesh(shipNoseGeo, shipNoseMat);
+shipNoseMesh.position.y = 2.25;
+shipGroup.add(shipNoseMesh);
 
-const shipNoseGeometry = new THREE.ConeGeometry(0.6, 1.5, 16);
-const shipNoseMaterial = new THREE.MeshStandardMaterial({
-    color: 0xff3333,
-    roughness: 0.4,
-    metalness: 0.6
-});
-const shipNose = new THREE.Mesh(shipNoseGeometry, shipNoseMaterial);
-shipNose.position.y = 2.25;
-shipGroup.add(shipNose);
+const engineGeo = new THREE.CylinderGeometry(0.25, 0.35, 0.8, 12);
+const engineMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.7 });
+const engineMesh = new THREE.Mesh(engineGeo, engineMat);
+engineMesh.position.y = -1.9;
+shipGroup.add(engineMesh);
 
-const engineGeometry = new THREE.CylinderGeometry(0.25, 0.35, 0.8, 12);
-const engineMaterial = new THREE.MeshBasicMaterial({
-    color: 0x00ffff,
-    transparent: true,
-    opacity: 0.7
-});
-const engine = new THREE.Mesh(engineGeometry, engineMaterial);
-engine.position.y = -1.9;
-shipGroup.add(engine);
-
-// Position ship near planet
-shipGroup.position.set(0, 35, 40);
-shipGroup.rotation.z = Math.PI; // Point forward
+shipGroup.position.set(0, 0, 80);
 scene.add(shipGroup);
 
-// Ship physics body (dynamic!)
-const shipShape = new CANNON.Sphere(1.5); // Approximate collider
+const shipShape = new CANNON.Sphere(1.5);
 const shipPhysicsBody = new CANNON.Body({
     mass: 5,
     shape: shipShape,
-    linearDamping: 0.1,
-    angularDamping: 0.3
+    linearDamping: 0.2,
+    angularDamping: 0.5
 });
-shipPhysicsBody.position.set(0, 35, 40);
+shipPhysicsBody.position.set(0, 0, 80);
 world.addBody(shipPhysicsBody);
 
-// Ship control parameters
-const shipControls = {
-    rotationSpeed: 1.5,
-    thrustForce: 40,
-    boostMultiplier: 2.0
-};
-
-// Keyboard input tracking
+// Controls
 const keys = {};
-window.addEventListener('keydown', (e) => { keys[e.code] = true; });
-window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+window.addEventListener('keydown', (e) => keys[e.code] = true);
+window.addEventListener('keyup', (e) => keys[e.code] = false);
 
-// Ship orientation (Euler angles)
-let shipPitch = 0;
-let shipYaw = 0;
+let shipPitch = 0, shipYaw = 0;
+const config = { thrust: 50, rotation: 2, gravity: 2000 };
 
-// TEST ASTEROID with physics (keeping from Phase 3)
-const testAsteroidGeometry = new THREE.IcosahedronGeometry(2, 1);
-const testAsteroidMaterial = new THREE.MeshStandardMaterial({
-    color: 0x888888,
-    roughness: 0.9,
-    metalness: 0.1
+// Collision Detection
+shipPhysicsBody.addEventListener('collide', (e) => {
+    const relativeVelocity = e.contact.getImpactVelocityAlongNormal();
+    if (relativeVelocity > 10) {
+        gameState.isCrashed = true;
+        document.getElementById('status').innerText = 'CRASHED! Press R to Restart';
+    } else if (e.body === planetBody) {
+        gameState.isLanded = true;
+    }
 });
-const testAsteroid = new THREE.Mesh(testAsteroidGeometry, testAsteroidMaterial);
-testAsteroid.position.set(-15, 25, 20);
-scene.add(testAsteroid);
 
-const asteroidShape = new CANNON.Sphere(2);
-const asteroidBody = new CANNON.Body({ mass: 0, shape: asteroidShape });
-asteroidBody.position.set(-15, 25, 20);
-world.addBody(asteroidBody);
+// HUD
+const hud = document.createElement('div');
+hud.style.position = 'absolute';
+hud.style.top = '10px';
+hud.style.left = '10px';
+hud.style.color = 'white';
+hud.style.fontFamily = 'monospace';
+hud.innerHTML = `
+    <div style="font-size: 20px;">Fuel: <span id="fuel">100</span>%</div>
+    <div style="font-size: 20px;">Minerals: <span id="minerals">0</span>/10</div>
+    <div id="status" style="font-size: 24px; color: red; margin-top: 10px;"></div>
+`;
+document.body.appendChild(hud);
 
-// HUD Elements
-const hudDiv = document.createElement('div');
-hudDiv.style.position = 'absolute';
-hudDiv.style.top = '20px';
-hudDiv.style.right = '20px';
-hudDiv.style.color = 'yellow';
-hudDiv.style.fontFamily = 'monospace';
-hudDiv.style.fontSize = '24px';
-hudDiv.style.border = '2px solid yellow';
-hudDiv.style.padding = '10px';
-hudDiv.style.borderRadius = '10px';
-hudDiv.innerHTML = 'Minerals: 0 / 10';
-document.body.appendChild(hudDiv);
-
-const fuelDiv = document.createElement('div');
-fuelDiv.style.position = 'absolute';
-fuelDiv.style.top = '20px';
-fuelDiv.style.left = '20px';
-fuelDiv.style.color = 'cyan';
-fuelDiv.style.fontFamily = 'monospace';
-fuelDiv.style.fontSize = '20px';
-fuelDiv.style.border = '2px solid cyan';
-fuelDiv.style.padding = '10px';
-fuelDiv.style.borderRadius = '10px';
-fuelDiv.innerHTML = '<div>Fuel</div><div id="fuelBar" style="width:200px;height:20px;background:linear-gradient(to right, red, yellow, lime);border:2px solid white;margin-top:5px;"></div>';
-document.body.appendChild(fuelDiv);
-
-const instructionsDiv = document.createElement('div');
-instructionsDiv.style.position = 'absolute';
-instructionsDiv.style.bottom = '20px';
-instructionsDiv.style.left = '50%';
-instructionsDiv.style.transform = 'translateX(-50%)';
-instructionsDiv.style.color = 'cyan';
-instructionsDiv.style.fontFamily = 'monospace';
-instructionsDiv.style.fontSize = '18px';
-instructionsDiv.style.border = '2px solid cyan';
-instructionsDiv.style.padding = '15px';
-instructionsDiv.style.borderRadius = '10px';
-instructionsDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-instructionsDiv.style.textAlign = 'center';
-instructionsDiv.innerHTML = 'WASD = rotate, Space = thrust, Shift = boost';
-document.body.appendChild(instructionsDiv);
-
-// Animation Loop
+// Animation
 let lastTime = performance.now();
-
 function animate() {
     requestAnimationFrame(animate);
-    
-    const currentTime = performance.now();
-    let deltaTime = (currentTime - lastTime) / 1000;
-    lastTime = currentTime;
-    
-    // Limit deltaTime to prevent physics explosions
-    if (deltaTime > 0.1) deltaTime = 0.1;
-    
-    // Fixed timestep physics
-    accumulator += deltaTime;
+    const time = performance.now();
+    let dt = (time - lastTime) / 1000;
+    lastTime = time;
+    if (dt > 0.1) dt = 0.1;
+
+    if (gameState.isCrashed) {
+        if (keys['KeyR']) location.reload();
+        return;
+    }
+
+    accumulator += dt;
     while (accumulator >= fixedTimeStep) {
         world.step(fixedTimeStep);
         accumulator -= fixedTimeStep;
     }
-    
-    // Handle ship rotation controls (A/D for yaw, W/S for pitch)
-    if (keys['KeyA']) shipYaw += shipControls.rotationSpeed * deltaTime;
-    if (keys['KeyD']) shipYaw -= shipControls.rotationSpeed * deltaTime;
-    if (keys['KeyW']) shipPitch += shipControls.rotationSpeed * deltaTime;
-    if (keys['KeyS']) shipPitch -= shipControls.rotationSpeed * deltaTime;
-    
-    // Clamp pitch to avoid flipping
-    shipPitch = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, shipPitch));
-    
-    // Apply rotation to physics body using quaternion
-    const quaternion = new CANNON.Quaternion();
-    quaternion.setFromEuler(shipPitch, shipYaw, Math.PI);
-    shipPhysicsBody.quaternion.copy(quaternion);
-    
-    // Handle thrust (Space = forward thrust)
-    if (keys['Space']) {
-        const thrustMagnitude = keys['ShiftLeft'] || keys['ShiftRight'] ? 
-            shipControls.thrustForce * shipControls.boostMultiplier : 
-            shipControls.thrustForce;
-        
-        // Calculate forward direction from ship's current rotation
-        const forward = new CANNON.Vec3(0, 1, 0);
-        shipPhysicsBody.quaternion.vmult(forward, forward);
-        forward.scale(thrustMagnitude, forward);
-        
-        shipPhysicsBody.applyForce(forward, shipPhysicsBody.position);
-        
-        // Visual: Make engine glow brighter
-        engine.material.opacity = 0.9;
-        engine.scale.set(1.2, 1.2, 1.2);
+
+    // Gravity
+    const distVec = new CANNON.Vec3();
+    planetBody.position.vsub(shipPhysicsBody.position, distVec);
+    const distSq = distVec.lengthSquared();
+    const gravityForce = distVec.unit().scale(config.gravity * shipPhysicsBody.mass / distSq);
+    shipPhysicsBody.applyForce(gravityForce, shipPhysicsBody.position);
+
+    // Rotation
+    if (keys['KeyW']) shipPitch += config.rotation * dt;
+    if (keys['KeyS']) shipPitch -= config.rotation * dt;
+    if (keys['KeyA']) shipYaw += config.rotation * dt;
+    if (keys['KeyD']) shipYaw -= config.rotation * dt;
+
+    const q = new CANNON.Quaternion();
+    q.setFromEuler(shipPitch, shipYaw, Math.PI);
+    shipPhysicsBody.quaternion.copy(q);
+
+    // Thrust
+    if (keys['Space'] && gameState.fuel > 0) {
+        const force = new CANNON.Vec3(0, 1, 0);
+        shipPhysicsBody.quaternion.vmult(force, force);
+        shipPhysicsBody.applyForce(force.scale(config.thrust), shipPhysicsBody.position);
+        gameState.fuel -= 5 * dt;
+        document.getElementById('fuel').innerText = Math.max(0, Math.floor(gameState.fuel));
+        engineMesh.scale.set(1.5, 1.5, 1.5);
     } else {
-        engine.material.opacity = 0.7;
-        engine.scale.set(1, 1, 1);
+        engineMesh.scale.set(1, 1, 1);
     }
-    
-    // Sync visual ship with physics body
+
+    // Sync
     shipGroup.position.copy(shipPhysicsBody.position);
     shipGroup.quaternion.copy(shipPhysicsBody.quaternion);
     
-    // Camera follows ship from behind
-    const cameraOffset = new THREE.Vector3(0, -15, -25);
-    cameraOffset.applyQuaternion(shipGroup.quaternion);
-    camera.position.copy(shipGroup.position).add(cameraOffset);
+    asteroids.forEach(a => {
+        a.mesh.position.copy(a.body.position);
+        a.mesh.quaternion.copy(a.body.quaternion);
+    });
+
+    // Camera
+    const offset = new THREE.Vector3(0, -12, -20).applyQuaternion(shipGroup.quaternion);
+    camera.position.copy(shipGroup.position).add(offset);
     camera.lookAt(shipGroup.position);
-    
-    // Rotate planet slowly
-    planet.rotation.y += 0.001;
-    
+
     renderer.render(scene, camera);
 }
-
 animate();
 
-// Handle window resize
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
