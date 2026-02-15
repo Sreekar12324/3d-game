@@ -1,5 +1,6 @@
-// Phase 2 - Space environment with planet, starfield, and ship
+// Phase 3 - Physics engine basics with Cannon-es
 import * as THREE from 'three';
+import * as CANNON from 'cannon-es';
 
 // Scene, Camera, Renderer
 const scene = new THREE.Scene();
@@ -21,6 +22,13 @@ const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5);
 directionalLight.position.set(50, 60, 30);
 scene.add(directionalLight);
 
+// Physics World (Cannon-es)
+const world = new CANNON.World();
+world.gravity.set(0, 0, 0); // Zero gravity for space
+world.broadphase = new CANNON.SAPBroadphase(world);
+const fixedTimeStep = 1/60;
+let accumulator = 0;
+
 // Starfield Background
 function createStarfield() {
     const starGeometry = new THREE.BufferGeometry();
@@ -35,9 +43,9 @@ function createStarfield() {
     
     starGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     
-    const starMaterial = new THREE.PointsMaterial({
-        color: 0xffffff,
-        size: 0.8,
+    const starMaterial = new THREE.PointsMaterial({ 
+        color: 0xffffff, 
+        size: 1.5,
         sizeAttenuation: true
     });
     
@@ -48,98 +56,132 @@ function createStarfield() {
 
 const starfield = createStarfield();
 
-// Planet - Sphere at origin with proper scale
+// Planet (visual + static physics body)
 const planetGeometry = new THREE.SphereGeometry(20, 64, 64);
-const planetMaterial = new THREE.MeshStandardMaterial({
-    color: 0x3366aa,
-    roughness: 0.7,
+const planetMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0x2244aa,
+    roughness: 0.8,
     metalness: 0.2
 });
 const planet = new THREE.Mesh(planetGeometry, planetMaterial);
 planet.position.set(0, 0, 0);
 scene.add(planet);
 
-// Ship Placeholder - Simple geometric ship
-function createShip() {
-    const shipGroup = new THREE.Group();
+// Planet physics body (static)
+const planetShape = new CANNON.Sphere(20);
+const planetBody = new CANNON.Body({ mass: 0, shape: planetShape });
+planetBody.position.set(0, 0, 0);
+world.addBody(planetBody);
+
+// Ship placeholder (visual only, no physics yet)
+const shipGroup = new THREE.Group();
+
+const shipBodyGeometry = new THREE.CylinderGeometry(0.5, 0.8, 3, 16);
+const shipBodyMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0xcccccc,
+    roughness: 0.3,
+    metalness: 0.7
+});
+const shipBody = new THREE.Mesh(shipBodyGeometry, shipBodyMaterial);
+shipGroup.add(shipBody);
+
+const shipNoseGeometry = new THREE.ConeGeometry(0.6, 1.5, 16);
+const shipNoseMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0xff3333,
+    roughness: 0.4,
+    metalness: 0.6
+});
+const shipNose = new THREE.Mesh(shipNoseGeometry, shipNoseMaterial);
+shipNose.position.y = 2.25;
+shipGroup.add(shipNose);
+
+const engineGeometry = new THREE.CylinderGeometry(0.25, 0.35, 0.8, 12);
+const engineMaterial = new THREE.MeshBasicMaterial({ 
+    color: 0x00ffff,
+    transparent: true,
+    opacity: 0.7
+});
+const engine = new THREE.Mesh(engineGeometry, engineMaterial);
+engine.position.y = -1.9;
+shipGroup.add(engine);
+
+shipGroup.position.set(0, 35, 40);
+scene.add(shipGroup);
+
+// TEST ASTEROID with physics (Phase 3 focus)
+const testAsteroidGeometry = new THREE.IcosahedronGeometry(2, 1);
+const testAsteroidMaterial = new THREE.MeshStandardMaterial({ 
+    color: 0x888888,
+    roughness: 1.0,
+    metalness: 0.0
+});
+const testAsteroid = new THREE.Mesh(testAsteroidGeometry, testAsteroidMaterial);
+scene.add(testAsteroid);
+
+// Test asteroid physics body (dynamic)
+const testAsteroidShape = new CANNON.Sphere(2);
+const testAsteroidBody = new CANNON.Body({ 
+    mass: 5, 
+    shape: testAsteroidShape,
+    linearDamping: 0.05,
+    angularDamping: 0.1
+});
+testAsteroidBody.position.set(30, 20, 10);
+testAsteroidBody.velocity.set(-2, 1, -0.5); // Initial drift velocity
+testAsteroidBody.angularVelocity.set(0.5, 0.3, 0.2); // Initial spin
+world.addBody(testAsteroidBody);
+
+// Clock for delta time
+const clock = new THREE.Clock();
+
+// Animation variables
+let planetRotation = 0;
+let starfieldRotation = 0;
+let shipBob = 0;
+
+// HUD elements
+const fuelFill = document.getElementById('fuel-fill');
+const mineralsCount = document.getElementById('minerals-count');
+const statusText = document.getElementById('status-text');
+
+// Update status for Phase 3
+statusText.textContent = 'Phase 3: Physics test asteroid drifting (top right)';
+
+function animate() {
+    requestAnimationFrame(animate);
     
-    // Main body
-    const bodyGeometry = new THREE.CylinderGeometry(0.8, 1.2, 4, 8);
-    const bodyMaterial = new THREE.MeshStandardMaterial({
-        color: 0xcccccc,
-        metalness: 0.7,
-        roughness: 0.3
-    });
-    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-    body.rotation.x = Math.PI / 2;
-    shipGroup.add(body);
+    const delta = clock.getDelta();
+    accumulator += delta;
     
-    // Nose cone
-    const noseGeometry = new THREE.ConeGeometry(0.8, 2, 8);
-    const noseMaterial = new THREE.MeshStandardMaterial({
-        color: 0xff5533,
-        metalness: 0.6,
-        roughness: 0.4
-    });
-    const nose = new THREE.Mesh(noseGeometry, noseMaterial);
-    nose.rotation.x = Math.PI / 2;
-    nose.position.z = 3;
-    shipGroup.add(nose);
+    // Fixed timestep physics updates
+    while (accumulator >= fixedTimeStep) {
+        world.step(fixedTimeStep);
+        accumulator -= fixedTimeStep;
+    }
     
-    // Engine glow
-    const engineGeometry = new THREE.CylinderGeometry(0.5, 0.6, 1, 8);
-    const engineMaterial = new THREE.MeshBasicMaterial({
-        color: 0x00ffff,
-        transparent: true,
-        opacity: 0.8
-    });
-    const engine = new THREE.Mesh(engineGeometry, engineMaterial);
-    engine.rotation.x = Math.PI / 2;
-    engine.position.z = -2.5;
-    shipGroup.add(engine);
+    // Sync test asteroid mesh from physics body
+    testAsteroid.position.copy(testAsteroidBody.position);
+    testAsteroid.quaternion.copy(testAsteroidBody.quaternion);
     
-    return shipGroup;
+    // Planet slow rotation (visual only)
+    planetRotation += 0.002;
+    planet.rotation.y = planetRotation;
+    
+    // Starfield subtle rotation
+    starfieldRotation += 0.0001;
+    starfield.rotation.y = starfieldRotation;
+    
+    // Ship gentle bobbing (visual only)
+    shipBob += delta;
+    shipGroup.position.y = 35 + Math.sin(shipBob * 0.5) * 0.3;
+    
+    renderer.render(scene, camera);
 }
 
-const ship = createShip();
-ship.position.set(0, 25, 40);
-ship.rotation.x = -0.3;
-scene.add(ship);
-
-// HUD Elements
-const fuelFillEl = document.getElementById('fuel-fill');
-const mineralsEl = document.getElementById('minerals');
-const statusTextEl = document.getElementById('status-text');
-
-// Update HUD
-function updateHUD() {
-    fuelFillEl.style.width = '100%';
-    mineralsEl.textContent = 'Minerals: 0/10';
-    statusTextEl.textContent = 'Phase 2 - Space Environment Ready';
-}
-
-// Resize handling
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
-
-// Animation loop
-function animate() {
-    requestAnimationFrame(animate);
-    
-    // Slow planet rotation
-    planet.rotation.y += 0.002;
-    
-    // Subtle starfield rotation
-    starfield.rotation.y += 0.0001;
-    
-    // Gentle ship bobbing
-    ship.position.y = 25 + Math.sin(Date.now() * 0.001) * 0.5;
-    
-    updateHUD();
-    renderer.render(scene, camera);
-}
 
 animate();
