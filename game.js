@@ -1,4 +1,6 @@
-// Phase 5 - Planet Gravity, Asteroid Field, and Crash States
+// Phase 5 - Planet Gravity, Asteroid Fi
+// Force update Phase 5
+eld, and Crash States
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 
