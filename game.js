@@ -59,9 +59,10 @@ const fuelFill = document.getElementById('fuel-fill');
 const mineralsCount = document.getElementById('minerals-count');
 const statusText = document.getElementById('status-text');
 
+const velocityValue = document.getElementById('velocity-value');
 // Start screen management
 const startScreen = document.getElementById('start-screen');
-const startButton = document.getElementById('start-button');
+const startButton = document.getElementById('start-button'
 const hud = document.getElementById('hud');
 
 // Initially hide HUD
@@ -284,6 +285,10 @@ function animate() {
     
     // HUD
     if (fuelFill) fuelFill.style.width = Math.max(0, gameState.fuel) + "%";
+        
+    // Update velocity display
+    const velocity = shipBody.velocity.length();
+    if (velocityValue) velocityValue.textContent = velocity.toFixed(1);
     
     // Smooth camera follow
     const camOffset = new THREE.Vector3(0, 8, -currentCameraDistance).applyQuaternion(shipGroup.quaternion);
