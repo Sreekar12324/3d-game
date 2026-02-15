@@ -64,6 +64,15 @@ body {
     font-weight: bold;
 }
 
+#velocity {
+    background: rgba(0, 0, 0, 0.7);
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: 2px solid #00ff00;
+    font-size: 18px;
+    font-weight: bold;
+}
+
 #hud-bottom {
     position: fixed;
     bottom: 20px;
