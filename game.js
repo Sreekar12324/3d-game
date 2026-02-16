@@ -147,11 +147,10 @@ const statusText = document.getElementById('status-text');
 const velocityValue = document.getElementById('velocity-value');
 // Start screen management
 const startScreen = document.getElementById('start-screen');
-const startButton = document.getElementById('start-button'
-const hud = document.getElementById('hud');
+const startButton = document.getElementById('start-button');const hud = document.getElementById('hud');
 
 // Initially hide HUD
-if (hud) hud.style.display = 'none';
+if (hud) hud.style.display = 'none';);
 
 startButton.addEventListener('click', () => {
     startScreen.style.display = 'none';
@@ -259,8 +258,7 @@ shipBody.addEventListener('collide', (e) => {
         if (index !== -1) {
             scene.remove(asteroids[index].mesh);
             world.removeBody(asteroids[index].body);
-            asteroids.splice(index, 1);
-            gameState.minerals++;
+                const index = asteroids.findIndex(a => a.body === otherBody);            gameState.minerals++;
             if (mineralsCount) mineralsCount.innerText = "Minerals: " + gameState.minerals + " / 10";
             
             if (gameState.minerals >= 10) {
