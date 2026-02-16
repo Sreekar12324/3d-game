@@ -157,6 +157,14 @@ startButton.addEventListener('click', () => {
     if (hud) hud.style.display = 'block';
 });
 
+// Also allow Enter key to start
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && startScreen.style.display !== 'none') {
+        startScreen.style.display = 'none';
+        if (hud) hud.style.display = 'block';
+    }
+});
+
 // Starfield with depth
 const starGeo = new THREE.BufferGeometry();
 const starPos = new Float32Array(8000 * 3);
