@@ -147,8 +147,8 @@ const statusText = document.getElementById('status-text');
 const velocityValue = document.getElementById('velocity-value');
 // Start screen management
 const startScreen = document.getElementById('start-screen');
-const startButton = document.getElementById('start-button');const hud = document.getElementById('hud');
-
+const startButton = document.getElementById('start-button');
+const hud = document.getElementById('hud');
 // Initially hide HUD
 if (hud) hud.style.display = 'none';);
 
