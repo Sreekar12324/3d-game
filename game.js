@@ -145,7 +145,9 @@ const mineralsCount = document.getElementById('minerals-count');
 const statusText = document.getElementById('status-text');
 
 const velocityValue = document.getElementById('velocity-value');
-// Start screen management
+// Show HUD immediately
+if (hud) hud.style.display = 'block';
+/*// Start screen management
 const startScreen = document.getElementById('start-screen');
 const startButton = document.getElementById('start-button');
 const hud = document.getElementById('hud');
@@ -163,7 +165,7 @@ window.addEventListener('keydown', (e) => {
         startScreen.style.display = 'none';
         if (hud) hud.style.display = 'block';
     }
-});
+}); */
 
 // Starfield with depth
 const starGeo = new THREE.BufferGeometry();
