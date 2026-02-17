@@ -262,11 +262,12 @@ shipBody.addEventListener('collide', (e) => {
         statusText.innerText = "CRASHED! Press R to reload.";
         statusText.style.color = "red";
     } else if (otherBody.isAsteroid && v < 5) {
-                const index = asteroids.findIndex(a => a.body === otherBody);                            playCollisionSound();indIndex(a => a.body === otherBody);
+                const index = asteroids.findIndex(a => a.body === otherBody);
+                            playCollisionSound();
         if (index !== -1) {
             scene.remove(asteroids[index].mesh);
             world.removeBody(asteroids[index].body);
-                const index = asteroids.findIndex(a => a.body === otherBody);            gameState.minerals++;
+                    gameState.minerals++;
             if (mineralsCount) mineralsCount.innerText = "Minerals: " + gameState.minerals + " / 10";
             
             if (gameState.minerals >= 10) {
