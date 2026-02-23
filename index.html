@@ -7,17 +7,17 @@
     <link rel="stylesheet" href="style.css">
     <script async src="https://ga.jspm.io/npm:es-module-shims@1.5.1/dist/es-module-shims.js" crossorigin="anonymous"></script>
     <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.154.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.154.0/examples/jsm/",
-                "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"
-            }
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.154.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.154.0/examples/jsm/",
+            "cannon-es": "https://unpkg.com/cannon-es@0.20.0/dist/cannon-es.js"
         }
+    }
     </script>
 </head>
 <body>
-    <div id="start-screen" style="display: none;">
+    <div id="start-screen">
         <h1>Space Miner 3D</h1>
         <p>Pilot your ship to collect 10 minerals from the asteroid belt.</p>
         <p>Maintain low velocity (under 5m/s) during extraction to avoid damage.</p>
@@ -25,7 +25,7 @@
         <button id="start-button">START MISSION</button>
     </div>
 
-    <div id="hud">
+    <div id="hud" style="display: none;">
         <div id="hud-top">
             <div id="fuel-container">
                 <span>Fuel</span>
@@ -33,12 +33,13 @@
                     <div id="fuel-fill"></div>
                 </div>
             </div>
+            
             <div id="minerals">
-                <span id="minerals-count">0</span> / 10
+                <span id="minerals-count">Minerals: 0 / 10</span>
             </div>
+
             <div id="velocity">
-                <span>Velocity</span>
-                <span id="velocity-value">0.0</span> m/s
+                Velocity: <span id="velocity-value">0.0</span> m/s
             </div>
         </div>
 
