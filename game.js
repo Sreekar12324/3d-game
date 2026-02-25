@@ -299,7 +299,17 @@ function animate() {
     camera.lookAt(shipGroup.position);
     renderer.render(scene, camera);
 }
-animate();
+// ==== START BUTTON HANDLER ====
+const startScreen = document.getElementById('start-screen');
+const hud = document.getElementById('hud');
+const startButton = document.getElementById('start-button');
+startButton.addEventListener('click', () => {
+    audioContext.resume();
+    startScreen.style.display = 'none';
+    hud.style.display = 'block';
+    lastTime = performance.now();
+    animate();
+});
 
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
