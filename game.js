@@ -30,6 +30,10 @@ const camera = new THREE.PerspectiveCamera(CAMERA.normalFOV, window.innerWidth /
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
+renderer.domElement.style.position = 'fixed';
+renderer.domElement.style.top = '0';
+renderer.domElement.style.left = '0';
+renderer.domElement.style.zIndex = '0';
 
 // ==== AUDIO SETUP ====
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
